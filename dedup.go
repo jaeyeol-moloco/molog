@@ -8,11 +8,9 @@ import (
 
 var cache = ccache.New(ccache.Configure().MaxSize(1000))
 
-type LogKeyGen func(*Entry) string
-
 type Deduper struct {
 	CoolingTimeSeconds uint32
-	LogKeyGen          LogKeyGen
+	LogKeyGen          func(*Entry) string
 }
 
 func (d *Deduper) Suppress(entry *Entry) bool {
