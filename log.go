@@ -10,6 +10,8 @@ import (
 type Level = logrus.Level
 
 const (
+	// panicLevel, fatalLevel are not public because they're unused.
+	// They exist just to match the level numbers with logrus.
 	panicLevel Level = iota
 	fatalLevel
 	ErrorLevel
@@ -31,7 +33,8 @@ type Entry struct {
 }
 
 func (entry *Entry) Log(level Level, args ...interface{}) {
-	if entry.logger.allow(entry) {
+	limiter := entry.logger.limiter
+	if limiter == nil || limiter.Allow(entry) {
 		entry.internal.Log(level, args...)
 	}
 }
@@ -66,8 +69,7 @@ func (entry *Entry) GetFields() Fields {
 
 type Logger struct {
 	internal *logrus.Logger
-	sampler  Sampler
-	deduper  *Deduper
+	limiter  Limiter
 }
 
 var defaultLogger = new(logrus.StandardLogger())
@@ -90,30 +92,11 @@ func (l *Logger) SetOutput(output io.Writer) {
 	l.internal.SetOutput(output)
 }
 
-func (l *Logger) Sampled(sampler Sampler) *Logger {
+func (l *Logger) Limited(limiter Limiter) *Logger {
 	return &Logger{
 		internal: l.internal,
-		sampler:  sampler,
-		deduper:  l.deduper,
+		limiter:  limiter,
 	}
-}
-
-func (l *Logger) Deduped(deduper *Deduper) *Logger {
-	return &Logger{
-		internal: l.internal,
-		sampler:  l.sampler,
-		deduper:  deduper,
-	}
-}
-
-func (l *Logger) allow(entry *Entry) bool {
-	if l.sampler != nil && !l.sampler.Sample(entry) {
-		return false
-	}
-	if l.deduper != nil && l.deduper.Suppress(entry) {
-		return false
-	}
-	return true
 }
 
 func (l *Logger) newEntry(internal *logrus.Entry) *Entry {
@@ -164,19 +147,10 @@ func SetOutput(output io.Writer) {
 	defaultLogger.internal.SetOutput(output)
 }
 
-func Sampled(sampler Sampler) *Logger {
+func Limited(limiter Limiter) *Logger {
 	return &Logger{
 		internal: defaultLogger.internal,
-		sampler:  sampler,
-		deduper:  defaultLogger.deduper,
-	}
-}
-
-func Deduped(deduper *Deduper) *Logger {
-	return &Logger{
-		internal: defaultLogger.internal,
-		sampler:  defaultLogger.sampler,
-		deduper:  deduper,
+		limiter:  limiter,
 	}
 }
 
