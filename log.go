@@ -72,7 +72,10 @@ type Logger struct {
 	limiter  Limiter
 }
 
-var defaultLogger = new(logrus.StandardLogger())
+var (
+	defaultLogger   = new(logrus.StandardLogger())
+	RequiredLimiter Limiter
+)
 
 func New() *Logger {
 	return new(logrus.New())
@@ -82,6 +85,13 @@ func new(internal *logrus.Logger) *Logger {
 	return &Logger{
 		internal: internal,
 	}
+}
+
+func applyRequiredLimiter(limiter Limiter) Limiter {
+	if RequiredLimiter != nil {
+		return AndLimiters(RequiredLimiter, limiter)
+	}
+	return limiter
 }
 
 func (l *Logger) SetFormatter(formatter Formatter) {
@@ -95,7 +105,7 @@ func (l *Logger) SetOutput(output io.Writer) {
 func (l *Logger) Limited(limiter Limiter) *Logger {
 	return &Logger{
 		internal: l.internal,
-		limiter:  limiter,
+		limiter:  applyRequiredLimiter(limiter),
 	}
 }
 
