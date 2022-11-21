@@ -3,7 +3,6 @@ package molog
 import (
 	"fmt"
 	"math/rand"
-	"path"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -108,17 +107,21 @@ func NewDeduperByCaller(coolingTimeSeconds uint32) *Deduper {
 
 func callerLogKey(_ *Entry) string {
 	pc := make([]uintptr, 8)
-	n := runtime.Callers(2, pc)
+	// Skips 4 frames:
+	// 0: callers() in runtime/extern.go <- must be skipped
+	// 1: Callers() in callerLogKey
+	// 2: LogKeyGen() in *Deduper.Allow func
+	// 3: Allow() in *Entry.Log
+	// 4: can be external or molog internal call <- start here
+	n := runtime.Callers(4, pc)
 	frames := runtime.CallersFrames(pc[:n])
 	for {
 		f, ok := frames.Next()
 		if !ok {
 			break
 		}
-		dir := path.Dir(f.File)
-		// This assumes the first frame in the stack whose source code doesn't belong to
-		// moloco/molog is the caller of a log function.
-		if !strings.HasSuffix(dir, "moloco/molog") {
+		// Finds the first external function call
+		if !strings.HasPrefix(f.Function, "github.com/moloco/molog.") {
 			return fmt.Sprintf("%s:%d", f.File, f.Line)
 		}
 	}

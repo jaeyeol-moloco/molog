@@ -41,4 +41,10 @@ func main() {
 		sampledAndDeduped.WithFields(molog.Fields{"event": "fire", "try": i}).Info("deduped for 1s and sample every 3rd try")
 		time.Sleep(100 * time.Millisecond)
 	}
+
+	dedupedByCaller := molog.Limited(molog.NewDeduperByCaller(1))
+	for i := 0; i < 10; i++ {
+		dedupedByCaller.WithFields(molog.Fields{"name": "john", "try": i}).Info("deduped by caller for 1s")
+		time.Sleep(100 * time.Millisecond)
+	}
 }
