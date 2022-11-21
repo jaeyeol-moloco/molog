@@ -148,10 +148,7 @@ func SetOutput(output io.Writer) {
 }
 
 func Limited(limiter Limiter) *Logger {
-	return &Logger{
-		internal: defaultLogger.internal,
-		limiter:  limiter,
-	}
+	return defaultLogger.Limited(limiter)
 }
 
 func WithField(key string, value any) *Entry {
