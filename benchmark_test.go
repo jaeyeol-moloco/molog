@@ -33,7 +33,7 @@ func BenchmarkMologNthSampler(b *testing.B) {
 	SetFormatter(&logrus.JSONFormatter{})
 
 	err := fmt.Errorf("something wrong happened")
-	deduped := Limited(NewNthSampler(10))
+	deduped := Limited(NewBasicSampler(10))
 	for i := 0; i < b.N; i++ {
 		deduped.WithFields(logrus.Fields{"event": "handler-error", "error": err}).Error("let's fix!")
 	}
@@ -59,6 +59,26 @@ func BenchmarkMologDeduperByCaller(b *testing.B) {
 	deduped := Limited(deduper)
 	for i := 0; i < b.N; i++ {
 		deduped.WithFields(logrus.Fields{"event": "handler-error", "error": err}).Error("let's fix!")
+	}
+}
+
+func BenchmarkMologSampled(b *testing.B) {
+	SetOutput(ioutil.Discard)
+	SetFormatter(&logrus.JSONFormatter{})
+
+	err := fmt.Errorf("something wrong happened")
+	for i := 0; i < b.N; i++ {
+		Sampled(0.1).WithFields(logrus.Fields{"event": "handler-error", "error": err}).Error("let's fix!")
+	}
+}
+
+func BenchmarkMologDeduped(b *testing.B) {
+	SetOutput(ioutil.Discard)
+	SetFormatter(&logrus.JSONFormatter{})
+
+	err := fmt.Errorf("something wrong happened")
+	for i := 0; i < b.N; i++ {
+		Deduped(60).WithFields(logrus.Fields{"event": "handler-error", "error": err}).Error("let's fix!")
 	}
 }
 

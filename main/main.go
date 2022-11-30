@@ -11,7 +11,7 @@ func main() {
 	molog.SetFormatter(&molog.JSONFormatter{})
 	molog.WithFields(molog.Fields{"company": "MOLOCO", "headquarter": "Redwood city"}).Info("Hi")
 
-	sampledLogger := molog.Limited(molog.NewNthSampler(10))
+	sampledLogger := molog.Limited(molog.NewBasicSampler(10))
 	for i := 0; i < 100; i++ {
 		sampledLogger.Errorf("error is logged at 0.1 rate")
 	}
@@ -35,16 +35,20 @@ func main() {
 			return fmt.Sprint(entry.GetFields()["event"])
 		},
 	}
-	thirdSampler := molog.NewNthSampler(3)
+	thirdSampler := molog.NewBasicSampler(3)
 	sampledAndDeduped := molog.Limited(molog.AndLimiters(eventDeduper, thirdSampler))
 	for i := 0; i < 30; i++ {
 		sampledAndDeduped.WithFields(molog.Fields{"event": "fire", "try": i}).Info("deduped for 1s and sample every 3rd try")
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	dedupedByCaller := molog.Limited(molog.NewDeduperByCaller(1))
+	// shorthands
+	for i := 0; i < 20; i++ {
+		molog.Sampled(0.1).WithFields(molog.Fields{"event": "some-ad-hoc-event", "try": i}).Info("randomly sampled")
+	}
+
 	for i := 0; i < 10; i++ {
-		dedupedByCaller.WithFields(molog.Fields{"name": "john", "try": i}).Info("deduped by caller for 1s")
+		molog.Deduped(1).WithFields(molog.Fields{"name": "john", "try": i}).Info("deduped shorthand")
 		time.Sleep(100 * time.Millisecond)
 	}
 }

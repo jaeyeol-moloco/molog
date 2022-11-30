@@ -20,7 +20,8 @@ type Limiter interface {
 // AndLimiters returns a new Limiter that concatenates the given limiters with
 // AND. In other words, the returned Limiter allows a log entry only if all the
 // given limiters allow the log entry.
-func AndLimiters(limiters ...Limiter) *andLimiter {
+func AndLimiters(first, second Limiter, others ...Limiter) *andLimiter {
+	limiters := append([]Limiter{first, second}, others...)
 	return &andLimiter{
 		limiters: limiters,
 	}
@@ -39,42 +40,40 @@ func (a *andLimiter) Allow(entry *Entry) bool {
 	return true
 }
 
-// NewNthSampler creates a Limiter that samples every nth log entry.
-func NewNthSampler(n uint32) *nthSampler {
-	return &nthSampler{
+// NewBasicSampler creates a Limiter that samples the first entry, then every nth entry thereafter.
+func NewBasicSampler(n uint32) *basicSampler {
+	return &basicSampler{
 		n: n,
 	}
 }
 
-type nthSampler struct {
+type basicSampler struct {
 	n       uint32
 	counter uint32
 }
 
-func (s *nthSampler) Allow(_ *Entry) bool {
+func (s *basicSampler) Allow(_ *Entry) bool {
 	n := s.n
 	if n == 1 {
 		return true
 	}
 	c := atomic.AddUint32(&s.counter, 1)
-	return c%n == 0
+	return c%n == 1
 }
 
 // NewRandomSampler creates a Limiter that samples log entries randomly at the given rate.
 func NewRandomSampler(rate float64) *randomSampler {
 	return &randomSampler{
 		rate: rate,
-		rnd:  rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 type randomSampler struct {
 	rate float64
-	rnd  *rand.Rand
 }
 
 func (s *randomSampler) Allow(_ *Entry) bool {
-	return s.rnd.Float64() < s.rate
+	return rand.Float64() < s.rate
 }
 
 var cache = ccache.New(ccache.Configure().MaxSize(1000))

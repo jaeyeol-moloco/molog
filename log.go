@@ -73,7 +73,6 @@ type Logger struct {
 }
 
 var (
-	defaultLogger   = new(logrus.StandardLogger())
 	RequiredLimiter Limiter
 )
 
@@ -89,7 +88,7 @@ func new(internal *logrus.Logger) *Logger {
 
 func applyRequiredLimiter(limiter Limiter) Limiter {
 	if RequiredLimiter != nil {
-		return AndLimiters(RequiredLimiter, limiter)
+		return AndLimiters(limiter, RequiredLimiter)
 	}
 	return limiter
 }
@@ -147,6 +146,13 @@ func (l *Logger) Warnf(format string, args ...interface{}) {
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
 	l.Logf(ErrorLevel, format, args...)
+}
+
+// defaultLogger
+var defaultLogger = new(logrus.StandardLogger())
+
+func SetDefaultLogger(logger *Logger) {
+	defaultLogger = logger
 }
 
 func SetFormatter(formatter Formatter) {
